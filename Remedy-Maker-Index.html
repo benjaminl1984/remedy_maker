@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Remedy Maker/Broadcaster</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            font-family: calibri;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .app-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .remedy-interface {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: url('pictures/Remedy-Maker.png') center center / contain no-repeat;
+        }
+
+        /* Fixed aspect ratio container that maintains proportions */
+        .interface-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: min(100vw, calc(100vh * 1068 / 427));
+            height: min(100vh, calc(100vw * 427 / 1068));
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .user-image {
+            position: absolute;
+            left: 3.75%;
+            top: 2.5%;
+            width: 20.8%;
+            height: 95%;
+            max-height: 95%;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            cursor: pointer;
+            border: 0.2vmin dashed #ccc;
+            border-radius: 1vmin;
+            opacity: 0.9;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 1vmin;
+        }
+
+        .sequence-controls {
+            position: absolute;
+            bottom: 1vmin;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.5vmin;
+            border-radius: 0.5vmin;
+            font-size: min(1.5vmin, 12px);
+            display: none;
+            z-index: 20;
+        }
+
+        .sequence-controls.active {
+            display: block;
+        }
+
+        .sequence-controls input[type="range"] {
+            width: 80px;
+            margin: 0 0.5vmin;
+        }
+
+        .sequence-controls button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.3vmin 0.6vmin;
+            border-radius: 0.3vmin;
+            cursor: pointer;
+            font-size: min(1.3vmin, 10px);
+            margin: 0 0.2vmin;
+        }
+
+        .sequence-controls button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .sequence-info {
+            position: absolute;
+            top: 1vmin;
+            right: 1vmin;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.3vmin 0.6vmin;
+            border-radius: 0.3vmin;
+            font-size: min(1.3vmin, 10px);
+            display: none;
+            z-index: 20;
+        }
+
+        .sequence-info.active {
+            display: block;
+        }
+
+        .text-input {
+            position: absolute;
+            left: 72.1%;
+            top: 24.6%;
+            width: 16.9%;
+            height: 56.2%;
+            font-size: min(2.6vmin, 28px);
+            font-weight: bold;
+            font-family: calibri;
+            border: 0.2vmin solid #ccc;
+            border-radius: 1vmin;
+            padding: 1vmin;
+            resize: none;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 10;
+        }
+
+        .knob-container {
+            position: absolute;
+            left: 43.7%;
+            top: 31%;
+            width: 10.6%;
+            height: 26.7%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .knob {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: 
+                radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.3) 20%, transparent 50%),
+                radial-gradient(circle at 70% 70%, rgba(0,0,0,0.3) 0%, transparent 30%),
+                linear-gradient(135deg, #e8e8e8 0%, #f5f5f5 15%, #d0d0d0 50%, #a8a8a8 85%, #9a9a9a 100%);
+            border: 0.4vmin solid #666;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 
+                0 0.8vmin 1.6vmin rgba(0,0,0,0.4),
+                inset 0 0.2vmin 0.4vmin rgba(255,255,255,0.8),
+                inset 0 -0.2vmin 0.4vmin rgba(0,0,0,0.2),
+                0 0.2vmin 0.4vmin rgba(255,255,255,0.6);
+        }
+
+        .knob:active {
+            cursor: grabbing;
+            box-shadow: 
+                0 0.4vmin 0.8vmin rgba(0,0,0,0.6),
+                inset 0 0.1vmin 0.2vmin rgba(255,255,255,0.9),
+                inset 0 -0.1vmin 0.2vmin rgba(0,0,0,0.3);
+        }
+
+        .knob-indicator {
+            position: absolute;
+            top: 0%;
+            left: 50%;
+            width: 6%;
+            height: 50%;
+            background: linear-gradient(180deg, #333 0%, #555 50%, #333 100%);
+            border-radius: 0.3vmin;
+            transform: translateX(-50%);
+            transform-origin: center 100%;
+            box-shadow: 
+                inset 0 0.1vmin 0.2vmin rgba(255,255,255,0.3),
+                0 0.1vmin 0.2vmin rgba(0,0,0,0.5);
+        }
+
+        .knob-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12%;
+            height: 12%;
+            background: 
+                radial-gradient(circle at 30% 30%, #888 0%, #555 50%, #333 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 
+                inset 0 0.1vmin 0.2vmin rgba(0,0,0,0.8),
+                0 0.1vmin 0.2vmin rgba(255,255,255,0.3);
+        }
+
+        /* Ensure everything scales together */
+        @media screen and (max-width: 600px) {
+            .text-input {
+                font-size: min(3vmin, 20px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="remedy-interface">
+            <div class="interface-overlay">
+                <label class="user-image" id="user-img-1" for="input-user-img-1">
+                    <input type="file" id="input-user-img-1" class="input-user-img" accept="image/*" multiple>
+                    
+                    <div class="sequence-controls" id="sequence-controls">
+                        <button id="play-pause-btn">⏸️</button>
+                        <span>Zeit: </span>
+                        <input type="range" id="duration-slider" min="1" max="30" value="10">
+                        <span id="duration-display">10s</span>
+                        <button id="prev-btn">⏮️</button>
+                        <button id="next-btn">⏭️</button>
+                    </div>
+                    
+                    <div class="sequence-info" id="sequence-info">
+                        <span id="image-counter">1/1</span>
+                    </div>
+                </label>
+                
+                <textarea class="text-input" id="text-input" placeholder="Text eingeben..."></textarea>
+
+                <div class="knob-container">
+                    <div class="knob" id="knob">
+                        <div class="knob-indicator"></div>
+                        <div class="knob-center"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const potencyLevels = [
+            { angle: 0, value: 'Tinktur', label: 'Tinktur' },
+            { angle: 27, value: 'C6', label: 'C6' },
+            { angle: 35, value: 'C12', label: 'C12' },
+            { angle: 52, value: 'C30', label: 'C30' },
+            { angle: 60, value: 'C100', label: 'C100' },
+            { angle: 87, value: 'C200', label: 'C200' },
+            { angle: 117, value: 'C1000', label: 'C1000' },
+            { angle: 160, value: 'C10000', label: 'C10000' },
+            { angle: 184, value: 'C50000', label: 'C50000' },
+            { angle: 214, value: 'C100000', label: 'C100000' },
+            { angle: 263, value: 'C1000000', label: '1MM' },
+            { angle: 305, value: 'C10000000', label: '10MM' },
+			{ angle: 330, value: '1000', label: 'M' }
+        ];
+
+        class SmoothKnobController {
+            constructor(knobElement) {
+                this.knob = knobElement;
+                this.isDragging = false;
+                this.currentAngle = 210; // Start bei 210° (7 Uhr Position)
+                this.minAngle = 0;       // 12 Uhr
+                this.maxAngle = 330;     // ca. 10 Uhr
+                this.restrictedStart = 150; // 5 Uhr
+                this.restrictedEnd = 210;   // 7 Uhr
+                this.lastValidAngle = 150;  // Letzter gültiger Winkel außerhalb der Sperrzone
+                
+                this.bindEvents();
+                this.updateKnob();
+            }
+
+            bindEvents() {
+                // Mouse events
+                this.knob.addEventListener('mousedown', (e) => this.startDrag(e));
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.stopDrag());
+
+                // Touch events
+                this.knob.addEventListener('touchstart', (e) => this.startDrag(e), { passive: false });
+                document.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
+                document.addEventListener('touchend', () => this.stopDrag());
+            }
+
+            startDrag(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                
+                const rect = this.knob.getBoundingClientRect();
+                this.centerX = rect.left + rect.width / 2;
+                this.centerY = rect.top + rect.height / 2;
+            }
+
+            drag(e) {
+                if (!this.isDragging) return;
+                e.preventDefault();
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const deltaX = clientX - this.centerX;
+                const deltaY = clientY - this.centerY;
+                
+                let angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+                if (angle < 0) angle += 360;
+                
+                // Behandlung der Sperrzone (150° bis 210°)
+                if (angle >= this.restrictedStart && angle <= this.restrictedEnd) {
+                    // In der Sperrzone - nur Rückwärtsbewegung erlauben
+                    if (this.lastValidAngle > this.restrictedEnd) {
+                        // Kam von rechts (über 210°) - kann nur zurück nach rechts
+                        angle = this.restrictedEnd + 0.1; // Knapp außerhalb der Sperrzone
+                    } else if (this.lastValidAngle < this.restrictedStart) {
+                        // Kam von links (unter 150°) - kann nur zurück nach links  
+                        angle = this.restrictedStart - 0.1; // Knapp außerhalb der Sperrzone
+                    } else {
+                        // War schon in der Sperrzone - nicht bewegen
+                        return;
+                    }
+                }
+                
+                // Begrenzung auf erlaubten Bereich (außerhalb der Sperrzone)
+                if (angle > this.maxAngle && angle < 360) {
+                    angle = this.maxAngle;
+                } else if (angle >= 0 && angle < this.minAngle) {
+                    angle = this.minAngle;
+                }
+                
+                // Gültigen Winkel speichern wenn außerhalb der Sperrzone
+                if (!(angle >= this.restrictedStart && angle <= this.restrictedEnd)) {
+                    this.lastValidAngle = angle;
+                }
+                
+                this.currentAngle = angle;
+                this.updateKnob();
+            }
+
+            stopDrag() {
+                this.isDragging = false;
+            }
+
+            updateKnob() {
+                this.knob.style.transform = `rotate(${this.currentAngle}deg)`;
+                
+                // Bestimme aktuellen Wert basierend auf dem glatten Winkel
+                this.currentValue = `${Math.round(this.currentAngle)}°`;
+            }
+
+            getCurrentValue() {
+                return this.currentValue || '210°';
+            }
+        }
+
+        // Image Sequence Controller
+        class ImageSequenceController {
+            constructor() {
+                this.images = [];
+                this.currentIndex = 0;
+                this.isPlaying = true;
+                this.duration = 10000; // 10 Sekunden default
+                this.intervalId = null;
+                this.targetElement = document.getElementById('user-img-1');
+                this.controls = document.getElementById('sequence-controls');
+                this.info = document.getElementById('sequence-info');
+                
+                this.initControls();
+            }
+            
+            initControls() {
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                const prevBtn = document.getElementById('prev-btn');
+                const nextBtn = document.getElementById('next-btn');
+                const durationSlider = document.getElementById('duration-slider');
+                const durationDisplay = document.getElementById('duration-display');
+                
+                playPauseBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.togglePlayPause();
+                });
+                
+                prevBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.previousImage();
+                });
+                
+                nextBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.nextImage();
+                });
+                
+                durationSlider.addEventListener('input', (e) => {
+                    this.duration = parseInt(e.target.value) * 1000;
+                    durationDisplay.textContent = e.target.value + 's';
+                    if (this.isPlaying) {
+                        this.stopSequence();
+                        this.startSequence();
+                    }
+                });
+            }
+            
+            loadImages(files) {
+                this.images = [];
+                let loadedCount = 0;
+                
+                for (let file of files) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.images.push(e.target.result);
+                        loadedCount++;
+                        
+                        if (loadedCount === files.length) {
+                            this.currentIndex = 0;
+                            this.showCurrentImage();
+                            this.updateControls();
+                            if (this.images.length > 1) {
+                                this.startSequence();
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            showCurrentImage() {
+                if (this.images.length > 0) {
+                    this.targetElement.style.backgroundImage = `url(${this.images[this.currentIndex]})`;
+                }
+            }
+            
+            updateControls() {
+                const counter = document.getElementById('image-counter');
+                const playPauseBtn = document.getElementById('play-pause-btn');
+                
+                if (this.images.length > 1) {
+                    this.controls.classList.add('active');
+                    this.info.classList.add('active');
+                    counter.textContent = `${this.currentIndex + 1}/${this.images.length}`;
+                    playPauseBtn.textContent = this.isPlaying ? '⏸️' : '▶️';
+                } else {
+                    this.controls.classList.remove('active');
+                    this.info.classList.remove('active');
+                }
+            }
+            
+            startSequence() {
+                if (this.images.length <= 1) return;
+                
+                this.stopSequence();
+                this.intervalId = setInterval(() => {
+                    this.nextImage();
+                }, this.duration);
+                this.isPlaying = true;
+                this.updateControls();
+            }
+            
+            stopSequence() {
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+                this.isPlaying = false;
+                this.updateControls();
+            }
+            
+            togglePlayPause() {
+                if (this.isPlaying) {
+                    this.stopSequence();
+                } else {
+                    this.startSequence();
+                }
+            }
+            
+            nextImage() {
+                if (this.images.length > 0) {
+                    this.currentIndex = (this.currentIndex + 1) % this.images.length;
+                    this.showCurrentImage();
+                    this.updateControls();
+                }
+            }
+            
+            previousImage() {
+                if (this.images.length > 0) {
+                    this.currentIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+                    this.showCurrentImage();
+                    this.updateControls();
+                }
+            }
+        }
+        // Initialize everything
+        let imageSequenceController;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize knob
+            const knob = document.getElementById('knob');
+            const knobController = new SmoothKnobController(knob);
+            
+            // Initialize image sequence controller
+            imageSequenceController = new ImageSequenceController();
+
+            // File upload with multiple image support
+            const input1 = document.getElementById('input-user-img-1');
+            input1.addEventListener('change', function(e) {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    imageSequenceController.loadImages(files);
+                }
+            });
+        });
+
+        // Prevent unwanted zoom/scroll
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
